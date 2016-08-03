@@ -1,0 +1,9 @@
+{
+	"result": {
+		"code": 0,
+		"desc": "请求成功"
+	},
+	"response": {
+		"is_registered": "false"
+	}
+}
