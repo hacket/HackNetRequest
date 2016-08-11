@@ -4,33 +4,11 @@ import com.orhanobut.logger.AndroidLogTool;
 import com.orhanobut.logger.Logger;
 
 import android.util.Log;
+import me.hacket.library.HNetConfig;
 
-/**
- * Log工具类，debug环境在输出所有级别l的og，release环境下只输出warn,error,assert级别的log
- * <p>
- * 参考 {@link  L#LOG_DEBUG_MODE}
- * </p>
- * <p>
- * Created by zengfansheng on 2016/3/24
- * </p>
- */
 public final class L {
 
-    /**
-     * debug环境在输出所有级别l的og
-     * <br/>
-     * release环境下只输出warn,error,assert级别的log
-     * <p/>
-     * you should config in your build.gradle
-     * <pre>
-     * buildTypes {
-     *    release {
-     *      buildConfigField "boolean", "LOG_DEBUG", "false"
-     *    }
-     * }
-     * </pre>
-     */
-    private static final boolean LOG_DEBUG_MODE = RunningContext.isLogDebug();
+    private static final boolean LOG_DEBUG_MODE = HNetConfig.IS_LOG_DEBUG;
 
     /**
      * Master switch.To catch debug level info you need set this value below {@link Log#VERBOSE}<br/>
@@ -41,15 +19,9 @@ public final class L {
      */
     private static final int LOG_RELEASE_LEVEL = Log.INFO;
 
-    /**
-     * debug和release 环境log level switch
-     */
     private static final int LOG_LEVEL = LOG_DEBUG_MODE ? LOG_DEBUG_LEVEL : LOG_RELEASE_LEVEL;
 
-    /**
-     * Default log tag
-     */
-    private static final String LOG_TAG = "bb_new";
+    private static final String LOG_TAG = HNetConfig.TAG;
 
     /**
      * init logger

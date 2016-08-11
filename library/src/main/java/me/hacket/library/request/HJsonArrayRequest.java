@@ -3,7 +3,6 @@ package me.hacket.library.request;
 import java.util.Map;
 
 import org.json.JSONArray;
-import org.json.JSONObject;
 
 import com.android.volley.AuthFailureError;
 import com.android.volley.Response;
@@ -14,19 +13,18 @@ import android.support.annotation.NonNull;
 /**
  * JsonArrayRequest
  * <p/>
- * Created by zengfansheng on 2016/8/2 0002.
+ * 其中post body为JSONArray  --body还未处理好
+ * <p/>
+ * Created by hacket on 2016/8/2 0002.
  */
 public class HJsonArrayRequest extends JsonArrayRequest {
 
     private Builder mBuilder;
 
     public HJsonArrayRequest(@NonNull Builder builder) {
-        this(builder.url, builder.listener, builder.errorListener);
+        super(builder.url, builder.listener, builder.errorListener);
+        //        super(builder.method, builder.url, builder.bodyJsonArray, builder.listener, builder.errorListener);
         this.mBuilder = builder;
-    }
-
-    public HJsonArrayRequest(String url, Response.Listener<JSONArray> listener, Response.ErrorListener errorListener) {
-        super(url, listener, errorListener);
     }
 
     @Override
@@ -39,16 +37,14 @@ public class HJsonArrayRequest extends JsonArrayRequest {
 
     public final static class Builder {
 
-        private int method;
+        private int method = Method.GET;
 
         private String url;
-
-        private JSONObject bodyJsonObj;
+        private Map<String, String> headers;
+        private JSONArray bodyJsonArray;
 
         private Response.Listener<JSONArray> listener;
         private Response.ErrorListener errorListener;
-
-        private Map<String, String> headers;
 
         public Builder setMethod(int method) {
             this.method = method;
@@ -60,8 +56,8 @@ public class HJsonArrayRequest extends JsonArrayRequest {
             return this;
         }
 
-        public Builder setBodyJsonObj(JSONObject bodyJsonObj) {
-            this.bodyJsonObj = bodyJsonObj;
+        public Builder setBodyJsonArray(JSONArray bodyJsonArray) {
+            this.bodyJsonArray = bodyJsonArray;
             return this;
         }
 

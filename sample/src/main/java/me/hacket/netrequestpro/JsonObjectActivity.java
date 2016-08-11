@@ -6,20 +6,19 @@ import android.app.Activity;
 import android.app.ProgressDialog;
 import android.os.Bundle;
 import android.widget.TextView;
-import me.hacket.library.Body;
+import me.hacket.library.HJsonBody;
+import me.hacket.library.HNet;
+import me.hacket.library.HNetConfig;
+import me.hacket.library.HParam;
 import me.hacket.library.Header;
-import me.hacket.library.Net;
-import me.hacket.library.NetConfig;
-import me.hacket.library.callback.RequestCallback;
+import me.hacket.library.callback.Callback;
 import me.hacket.library.callback.RequestError;
 import me.hacket.library.util.L;
-import me.hacket.netrequestpro.bean.Register;
+import me.hacket.netrequestpro.bean.RegisterObj;
 
 public class JsonObjectActivity extends Activity {
 
     private static final String TAG = "jsonobj";
-
-    //    http://218.17.0.92:51515/cloud_sales/api/v1/user/is_register_sale?client_config_version=1000&timestamp=20160803173157&client_device=android&chain_id=15bdc3584b1756139d960e168e8beecd&client_version=1.0.3.0&client_channel=0110&user_type=sale
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -33,49 +32,60 @@ public class JsonObjectActivity extends Activity {
         dialog.setMessage("Loading...");
         dialog.show();
 
-        NetConfig config = new NetConfig.Builder()
+        HNetConfig config = new HNetConfig.Builder()
                 .setContext(getApplicationContext())
-                .setBaseUrl("http://218.17.0.92:51515")
+                .setBaseUrl("http://172.17.1.123:8080")
                 .build();
 
-        Body body = new Body.Builder()
-                .add("phone","13510590884")
+        HJsonBody<String> jsonBody = new HJsonBody.Builder<String>()
+                .setBody("name")
                 .build();
 
         Header header = new Header.Builder()
+                .add("name", "hacket_json_obj")
+//                .add("name1", "hacket1_json_obj")
+//                .add("name2", "hacket2_json_obj")
                 .build();
 
-        TypeToken<Register> typeToken = new TypeToken<Register>() {
+        TypeToken<RegisterObj> typeToken = new TypeToken<RegisterObj>() {
         };
 
-        Net.connect()
-                .createRequest(config)
-                .post(header,body)
-                .pathUrl("/cloud_sales/api/v1/user/is_register_sale?client_config_version=1000&timestamp=20160803173157&client_device=android&chain_id=15bdc3584b1756139d960e168e8beecd&client_version=1.0.3.0&client_channel=0110&user_type=sale")
+        HParam params = new HParam.Builder()
+                .add("param1", "hacket_param1")
+//                .add("param2", "hacket_param2")
+//                .add("param3", "hacket_param3")
+                .build();
+
+        HNet.connect()
+                //                .createRequest(config)
+                .createRequest(header, params)
+                //                .get()
+                .get()
+                .baseUrl("http://192.168.199.233:8080")
+                .pathUrl("/test_obj.json")
                 .fromJsonObject()
                 .toBean(typeToken)
-                .execute("register_request_tag", new RequestCallback<Register>() {
+                .execute("register_request_tag", new Callback<RegisterObj>() {
                     @Override
-                    public void onRequestSuccess(Register register) {
+                    public void onResponseSuccess(RegisterObj register) {
                         dialog.dismiss();
-                        Register.Result result = register.result;
+                        RegisterObj.Result result = register.result;
                         int code = result.code;
                         String desc = result.desc;
                         L.i(TAG, "code:" + code);
                         L.i(TAG, "desc:" + desc);
 
                         if (code == 0) {
-                            Register.Response response = register.response;
-                            boolean is_registered = response.is_registered;
-                            L.i(TAG, "is_registered:" + is_registered);
-                            title.setText(""+is_registered);
+                            RegisterObj.Response response = register.response;
+                            title.setText(response.toString());
+                            L.i(TAG, "response:" + response);
                         }
                     }
 
                     @Override
-                    public void onRequestError(RequestError error) {
+                    public void onResponseError(RequestError error) {
                         dialog.dismiss();
-                        L.e(TAG, "error:" + error.getErrorCode());
+                        L.e(TAG, "error:" + error.getErrorCode() + error.getErrorMsg());
                     }
                 });
 

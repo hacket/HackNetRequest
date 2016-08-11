@@ -8,11 +8,13 @@ import android.app.Activity;
 import android.os.Bundle;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
-import me.hacket.library.Net;
-import me.hacket.library.callback.RequestCallback;
+import me.hacket.library.HParam;
+import me.hacket.library.Header;
+import me.hacket.library.HNet;
 import me.hacket.library.callback.RequestError;
-import me.hacket.library.request.BaseResponse;
+import me.hacket.library.callback.TemplateCallback;
 import me.hacket.library.util.L;
+import me.hacket.netrequestpro.bean.Person;
 import me.hacket.netrequestpro.bean.TempObj;
 
 public class TempActivity extends Activity {
@@ -29,25 +31,48 @@ public class TempActivity extends Activity {
     @OnClick(R.id.template_obj)
     public void template_obj() {
 
-        Net.connect()
+        //        headers.put("Content-Type", "application/x-javascript");
+        //        headers.put("Accept-Encoding", "gzip,deflate");
+
+        String baseUrl = "http://192.168.199.233:8080/"; //"http://172.17.1.123:8080/"
+
+        // 添加headers
+        Header header = new Header.Builder()
+                .add("Content-Type", "application/x-javascript")
+                .add("Accept-Encoding", "gzip,deflate")
+                .build();
+
+        Person person = new Person("hacket", 24);
+
+        //        TypeToken<TempObj> tempObj = TypeToken.get(TempObj.class);
+
+        HParam hParam = new HParam.Builder()
+                .add("client_id", "11111")
+                .build();
+
+        HNet.connect()
                 .createRequest()
-                .get()
-                .baseUrl("http://192.168.199.233:8080/")
+                //                .post(header, person)
+                .get(hParam)
+                .baseUrl(baseUrl)
                 .pathUrl("test_temp.json")
                 .fromTemplate()
+                //                .toBean(tempObj)
                 .toBean(TempObj.class)
-                .execute("temp_tag", new RequestCallback<BaseResponse<TempObj>>() {
+                .execute("temp_tag", new TemplateCallback<TempObj>() {
                     @Override
-                    public void onRequestSuccess(BaseResponse<TempObj> tempObjBaseResponse) {
-                        BaseResponse.Result result = tempObjBaseResponse.result;
-                        TempObj response = tempObjBaseResponse.response;
-                        L.i(result);
-                        L.i(response);
+                    public void onResponseStatus(int code, String desc) {
+                        L.i(code + "---" + desc);
                     }
 
                     @Override
-                    public void onRequestError(RequestError error) {
-                        L.e(error.getErrorMsg());
+                    public void onResponseSuccess(TempObj tempObj) {
+                        L.i("onResponseSuccess:" + tempObj);
+                    }
+
+                    @Override
+                    public void onResponseError(RequestError error) {
+                        L.e("onResponseError:" + error.getErrorMsg());
                     }
                 });
     }
@@ -56,22 +81,23 @@ public class TempActivity extends Activity {
     public void template_array() {
 
         TypeToken<List<TempObj>> typeToken = new TypeToken<List<TempObj>>() {
-
         };
 
-        Net.connect()
+        HNet.connect()
                 .createRequest()
                 .get()
-                .baseUrl("http://192.168.199.233:8080/")
+                .baseUrl("http://172.17.1.123:8080/")
                 .pathUrl("test_temp_array.json")
                 .fromTemplate()
                 .toBean(typeToken)
-                .execute("", new RequestCallback<BaseResponse<List<TempObj>>>() {
+                .execute("", new TemplateCallback<List<TempObj>>() {
                     @Override
-                    public void onRequestSuccess(BaseResponse<List<TempObj>> listBaseResponse) {
-                        BaseResponse.Result result = listBaseResponse.result;
-                        L.i(result);
-                        List<TempObj> tempObjList = listBaseResponse.response;
+                    public void onResponseStatus(int code, String desc) {
+                        L.i(code + "---" + code);
+                    }
+
+                    @Override
+                    public void onResponseSuccess(List<TempObj> tempObjList) {
                         L.i("tempObjList.size():" + tempObjList.size());
                         for (int i = 0; i < tempObjList.size(); i++) {
                             L.i(tempObjList.get(i));
@@ -79,7 +105,7 @@ public class TempActivity extends Activity {
                     }
 
                     @Override
-                    public void onRequestError(RequestError error) {
+                    public void onResponseError(RequestError error) {
                         L.e(error.getErrorMsg());
                     }
                 });

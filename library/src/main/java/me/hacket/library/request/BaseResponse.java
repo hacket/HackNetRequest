@@ -12,7 +12,9 @@ import android.support.annotation.NonNull;
 /**
  * BaseResponse
  *
- * @param <T> Created by zengfansheng on 2016/4/14.
+ * @param <T> T
+ *
+ *           Created by hacket on 2016/4/14.
  */
 public class BaseResponse<T> {
 
@@ -35,6 +37,10 @@ public class BaseResponse<T> {
             result = new Result(builder.code, builder.desc);
         }
         response = builder.response;
+    }
+
+    public boolean isSuccessful() {
+        return (result != null) && (result.code == RESPONSE_STATE_OK) && response != null;
     }
 
     public static class Result {

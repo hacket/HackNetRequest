@@ -1,153 +1,176 @@
 package me.hacket.library;
 
-import java.lang.reflect.Type;
-import java.util.HashMap;
-
 import com.android.volley.Request;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
 
 /**
- * 创建网络请求
+ * 创建网络请求类型：GET POST or PUT
  * <p/>
- * Created by zengfansheng on 2016/8/2 0002.
+ * Created by hacket on 2016/8/2 0002.
  */
 public class NetworkCreator {
 
-    private final String baseUrl;
     private final Context context;
+    private final String baseUrl;
 
-    NetworkCreator(Context context, String baseUrl) {
-        this.context = context;
-        this.baseUrl = baseUrl;
+    private final Header header;
+    private final HParam param;
+
+    NetworkCreator(@NonNull HNetConfig netConfig) {
+        this.context = netConfig.getContext();
+        this.baseUrl = netConfig.getBaseUrl();
+        this.header = netConfig.getHeader();
+        this.param = netConfig.getParam();
     }
 
+    // ========================= GET ========================= //
+
     /**
-     * GET
+     * GET不带headers
      *
-     * @return NetworkManager.INetworkManagerBuilder
+     * @return see {@link NetworkManager.INetworkManagerBuilder}
      */
     public NetworkManager.INetworkManagerBuilder get() {
-        return new NetworkManager.Builder().setBaseUrl(baseUrl).setContext(context).setMethod(Request.Method.GET);
+        return new NetworkManager.Builder().setBaseUrl(baseUrl).setContext(context).setMethod(Request.Method.GET)
+                .setHeaders(header.getHeaders()).setParams(param.getParams());
     }
 
     /**
-     * GET
+     * GET不带headers
      *
-     * @param header Headers request, it can be null
+     * @param param {@link HParam}
      *
-     * @return NetworkManager.INetworkManagerBuilder
+     * @return see {@link NetworkManager.INetworkManagerBuilder}
+     */
+    public NetworkManager.INetworkManagerBuilder get(@NonNull HParam param) {
+        return new NetworkManager.Builder().setBaseUrl(baseUrl).setContext(context).setMethod(Request.Method.GET)
+                .setParams(param.getParams()).setHeaders(header.getHeaders());
+    }
+
+    /**
+     * GET带headers
+     *
+     * @param header Headers request . see {@link Header}
+     *
+     * @return see {@link NetworkManager.INetworkManagerBuilder}
      */
     public NetworkManager.INetworkManagerBuilder get(@NonNull Header header) {
         return new NetworkManager.Builder().setBaseUrl(baseUrl).setContext(context).setMethod(Request.Method.GET)
-                .setHeaders(header.getHeaders());
+                .setHeaders(header.getHeaders()).setParams(param.getParams());
     }
 
     /**
-     * POST
+     * GET带headers
      *
-     * @param header Headers request, it can be null
-     * @param body   Body request, it not null
+     * @param header Headers request . see {@link Header}
+     * @param hParam {@link HParam}
      *
-     * @return NetworkManager.INetworkManagerBuilder
+     * @return see {@link NetworkManager.INetworkManagerBuilder}
      */
-    public NetworkManager.INetworkManagerBuilder post(@NonNull Header header, @NonNull Body body) {
+    public NetworkManager.INetworkManagerBuilder get(@NonNull Header header, @NonNull HParam hParam) {
+        return new NetworkManager.Builder().setBaseUrl(baseUrl).setContext(context).setMethod(Request.Method.GET)
+                .setHeaders(header.getHeaders()).setParams(hParam.getParams());
+    }
+
+    // ========================= GET ========================= //
+
+    // ========================= POST ========================= //
+
+    /**
+     * POST带Header, 其中body为一个HJsonBody对象
+     *
+     * @param header    Headers request . see {@link Header}
+     * @param hJsonBody it not null, see {@link HJsonBody}
+     * @param hParam    see {@link HParam}
+     *
+     * @return see {@link NetworkManager.INetworkManagerBuilder}
+     */
+    public <T> NetworkManager.INetworkManagerBuilder post(@NonNull Header header, @NonNull HJsonBody<T> hJsonBody,
+                                                          @NonNull HParam hParam) {
         return new NetworkManager.Builder().setBaseUrl(baseUrl).setContext(context).setMethod(Request.Method.POST)
-                .setBodyRequest(body.getBodys()).setHeaders(header.getHeaders());
+                .setPostJsonBodys(hJsonBody.getBodyString()).setHeaders(header.getHeaders())
+                .setParams(hParam.getParams());
     }
 
     /**
-     * POST
+     * POST带Header, 其中body为一个HJsonBody对象
      *
-     * @param headers    Headers request, it can be null
-     * @param bodyObject Body request, it not null
+     * @param header    Headers request . see {@link Header}
+     * @param hJsonBody it not null, see {@link HJsonBody}
      *
-     * @returnNetworkManager.INetworkManagerBuilder
+     * @return see {@link NetworkManager.INetworkManagerBuilder}
      */
-    public NetworkManager.INetworkManagerBuilder post(@NonNull Header headers, @NonNull Object bodyObject) {
+    public <T> NetworkManager.INetworkManagerBuilder post(@NonNull Header header, @NonNull HJsonBody<T> hJsonBody) {
         return new NetworkManager.Builder().setBaseUrl(baseUrl).setContext(context).setMethod(Request.Method.POST)
-                .setBodyRequest(generateBodyRequest(bodyObject)).setHeaders(headers.getHeaders());
+                .setPostJsonBodys(hJsonBody.getBodyString()).setHeaders(header.getHeaders())
+                .setParams(param.getParams());
     }
 
     /**
-     * POST
+     * POST带Header, 其中body为一个HParam对象
      *
-     * @param bodyObject Body request, it not null
+     * @param header Headers request . see {@link Header}
+     * @param hParam it not null, see {@link HParam}
      *
-     * @return
+     * @return see {@link NetworkManager.INetworkManagerBuilder}
      */
-    public NetworkManager.INetworkManagerBuilder post(@NonNull Object bodyObject) {
+    public NetworkManager.INetworkManagerBuilder post(@NonNull Header header, @NonNull HParam hParam) {
         return new NetworkManager.Builder().setBaseUrl(baseUrl).setContext(context).setMethod(Request.Method.POST)
-                .setBodyRequest(generateBodyRequest(bodyObject));
+                .setHeaders(header.getHeaders()).setParams(hParam.getParams());
     }
+
+    /**
+     * POST不带Header, 其中Body为一个HJsonBody对象
+     *
+     * @param hJsonBody it not null, see {@link HJsonBody}
+     *
+     * @return see {@link NetworkManager.INetworkManagerBuilder}
+     */
+    public <T> NetworkManager.INetworkManagerBuilder post(@NonNull HJsonBody<T> hJsonBody) {
+        return new NetworkManager.Builder().setBaseUrl(baseUrl).setContext(context).setMethod(Request.Method.POST)
+                .setPostJsonBodys(hJsonBody.getBodyString()).setHeaders(header.getHeaders())
+                .setParams(param.getParams());
+    }
+
+    // ========================= POST ========================= //
+
+    // ========================= PUT ========================= //
 
     /**
      * PUT
      *
-     * @param headers    Headers request, it can be null
-     * @param bodyObject Body request, it not null
+     * @param header    Headers request . see {@link Header}
+     * @param hJsonBody Body request, it not null . see {@link HJsonBody}
      *
-     * @return
+     * @return see {@link NetworkManager.INetworkManagerBuilder}
      */
-    public NetworkManager.INetworkManagerBuilder put(@NonNull Header headers, @NonNull Object bodyObject) {
+    public NetworkManager.INetworkManagerBuilder put(@NonNull Header header, @NonNull HJsonBody hJsonBody) {
         return new NetworkManager.Builder().setBaseUrl(baseUrl).setContext(context).setMethod(Request.Method.PUT)
-                .setBodyRequest(generateBodyRequest(generateBodyRequest(bodyObject))).setHeaders(headers.getHeaders());
+                .setPostJsonBodys(hJsonBody.getBodyString()).setHeaders(header.getHeaders());
     }
 
     /**
-     * PUT
+     * @param hJsonBody T , Body request, it not null . see {@link HJsonBody}
      *
-     * @param headers     Headers request, it can be null
-     * @param bodyRequest Body request, it not null
-     *
-     * @return
+     * @return see {@link NetworkManager.INetworkManagerBuilder}
      */
-    public NetworkManager.INetworkManagerBuilder put(@NonNull Header headers, @NonNull Body bodyRequest) {
+    public <T> NetworkManager.INetworkManagerBuilder put(@NonNull HJsonBody hJsonBody) {
         return new NetworkManager.Builder().setBaseUrl(baseUrl).setContext(context).setMethod(Request.Method.PUT)
-                .setBodyRequest(generateBodyRequest(bodyRequest.getBodys())).setHeaders(headers.getHeaders());
+                .setPostJsonBodys(hJsonBody.getBodyString());
     }
 
-    /**
-     * PUT
-     *
-     * @param bodyObject Body request, it not null
-     *
-     * @return
-     */
-    public NetworkManager.INetworkManagerBuilder put(@NonNull Object bodyObject) {
-        return new NetworkManager.Builder().setBaseUrl(baseUrl).setContext(context).setMethod(Request.Method.PUT)
-                .setBodyRequest(generateBodyRequest(bodyObject));
-    }
+    // ========================= PUT ========================= //
 
     /**
-     * @param bodyRequest Body request, it not null
+     * @param header Headers request . see {@link Header}
      *
-     * @return
+     * @return see {@link NetworkManager.INetworkManagerBuilder}
      */
-    public NetworkManager.INetworkManagerBuilder put(@NonNull Body bodyRequest) {
-        return new NetworkManager.Builder().setBaseUrl(baseUrl).setContext(context).setMethod(Request.Method.PUT)
-                .setBodyRequest(bodyRequest.getBodys());
-    }
-
-    /**
-     * @param headers Headers request, it can be null
-     *
-     * @return
-     */
-    public NetworkManager.INetworkManagerBuilder delete(@NonNull Header headers) {
+    public NetworkManager.INetworkManagerBuilder delete(@NonNull Header header) {
         return new NetworkManager.Builder().setBaseUrl(baseUrl).setContext(context).setMethod(Request.Method.DELETE)
-                .setHeaders(headers.getHeaders());
-    }
-
-    private HashMap<String, Object> generateBodyRequest(Object bodyRequest) {
-        String bodyJson = new Gson().toJson(bodyRequest);
-        Type type = new TypeToken<HashMap<String, String>>() {
-        }.getType();
-        HashMap<String, Object> body = new Gson().fromJson(bodyJson, type);
-        return body;
+                .setHeaders(header.getHeaders());
     }
 
 }

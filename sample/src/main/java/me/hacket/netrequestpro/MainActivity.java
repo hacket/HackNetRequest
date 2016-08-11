@@ -3,8 +3,6 @@ package me.hacket.netrequestpro;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -23,11 +21,13 @@ public class MainActivity extends Activity {
 
         ListView listView = (ListView) findViewById(R.id.list);
 
-        String[] values = new String[] {"Request String",
-                "Json Object",
-                "Json Array",
-                "Template"
-        };
+        String[] values = new String[]
+                {
+                        "Request String",
+                        "Request Json Object",
+                        "Request Json Array",
+                        "Request Template"
+                };
 
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
                 android.R.layout.simple_list_item_1, android.R.id.text1, values);
@@ -61,25 +61,4 @@ public class MainActivity extends Activity {
         });
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
 }

@@ -18,11 +18,11 @@ import me.hacket.library.external.OkHttpStack;
 /**
  * Volley RequestQueue请求队列的初始化，添加，取消，删除缓存，清空缓存
  * <p/>
- * Created by zengfansheng on 2016/8/2 0002.
+ * Created by hacket on 2016/8/2 0002.
  */
 class VolleyManager {
 
-    private static final String LOG_TAG = "volley";
+    private static final String TAG = HNetConfig.TAG;
 
     /**
      * Default on-disk cache directory.

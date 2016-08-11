@@ -16,7 +16,7 @@ import android.support.annotation.Nullable;
 /**
  * 请求回调错误
  * <p/>
- * Created by zengfansheng on  2016年8月4日00:24:15
+ * Created by hacket on  2016年8月4日00:24:15
  */
 public final class RequestError {
 

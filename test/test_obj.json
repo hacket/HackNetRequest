@@ -4,6 +4,25 @@
 		"desc": "请求成功"
 	},
 	"response": {
-		"is_registered": "false"
+		"person": {
+			"is_bind_card": "1",
+			"name": "",
+			"nick_name_pys": "jdj",
+			"id_type": "0",
+			"name_pys": "",
+			"id": "450923198709211010",
+			"recommend_code": "195df49c4e2111e69205caed6cf9a56e",
+			"is_verify": "0",
+			"nick_name": "\u5c31\u5230\u5bb6"
+		},
+		"basic": {
+			"uid": "sale000000000004",
+			"email": "",
+			"phone": "13590402235",
+			"status": 0,
+			"user_type": "sale",
+			"register_time": "2016-07-20 10:24:34",
+			"pic_key": ""
+		}
 	}
 }

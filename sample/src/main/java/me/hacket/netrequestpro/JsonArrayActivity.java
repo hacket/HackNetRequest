@@ -9,9 +9,9 @@ import android.app.ProgressDialog;
 import android.os.Bundle;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
-import me.hacket.library.Net;
-import me.hacket.library.NetConfig;
-import me.hacket.library.callback.RequestCallback;
+import me.hacket.library.HNet;
+import me.hacket.library.HNetConfig;
+import me.hacket.library.callback.Callback;
 import me.hacket.library.callback.RequestError;
 import me.hacket.netrequestpro.bean.Person;
 
@@ -29,23 +29,26 @@ public class JsonArrayActivity extends Activity {
         dialog.setMessage("Loading...");
         dialog.show();
 
-        NetConfig config = new NetConfig.Builder()
+        String baseUrl = "http://192.168.199.233:8080/"; //"http://172.17.1.123:8080/"
+
+        HNetConfig config = new HNetConfig.Builder()
                 .setContext(getApplicationContext())
-                .setBaseUrl("http://192.168.199.233:8080/")
+                .setBaseUrl(baseUrl)
                 .build();
 
         TypeToken<List<Person>> typeToken = new TypeToken<List<Person>>() {
         };
 
-        Net.connect()
-                .createRequest(config)
+        HNet.connect()
+                .createRequest()
                 .get()
                 .pathUrl("/test_array.json")
                 .fromJsonArray()
                 .toBean(typeToken)
-                .execute("request_array_tag", new RequestCallback<List<Person>>() {
+                .execute("request_array_tag", new Callback<List<Person>>(){
+
                     @Override
-                    public void onRequestSuccess(List<Person> persons) {
+                    public void onResponseSuccess(List<Person> persons) {
                         dialog.dismiss();
                         String[] values = new String[persons.size()];
                         for (int i = 0; i < persons.size(); i++) {
@@ -59,7 +62,7 @@ public class JsonArrayActivity extends Activity {
                     }
 
                     @Override
-                    public void onRequestError(RequestError error) {
+                    public void onResponseError(RequestError error) {
                         dialog.dismiss();
                     }
                 });

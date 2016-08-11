@@ -6,7 +6,6 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.HashMap;
 import java.util.Map;
 
 import org.json.JSONArray;
@@ -18,19 +17,24 @@ import com.android.volley.NetworkResponse;
 import com.android.volley.ParseError;
 import com.android.volley.Request;
 import com.android.volley.Response;
-import com.android.volley.VolleyError;
 import com.android.volley.toolbox.HttpHeaderParser;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
-import me.hacket.library.util.L;
+import me.hacket.library.HNetConfig;
+import me.hacket.library.util.HUtils;
 
 /**
  * 模板HTemplateRequest
- * <br/>
- * 解析形如
+ * 请求参数params:
+ * <p/>
+ * GET: baseurl+ pathurl + params
+ * <p/>
+ * POST:  params和bodyJsonObj优先JsonObject, 没有bodyJsonObj由params构建请求body参数
+ * <p/>
+ * <b>解析形如</br>
  * <pre>
  * {
  *     "response": {}/[],
@@ -42,9 +46,8 @@ import me.hacket.library.util.L;
  * </pre>
  *
  * @param <T> T
- *
- *            Created by zengfansheng on 2016年8月3日23:06:23
  *            <p/>
+ *            Created by hacket on 2016年8月3日23:06:23
  *            <br/>
  *            Also see
  *            <br/>
@@ -52,12 +55,15 @@ import me.hacket.library.util.L;
  */
 public class HTemplateRequest<T> extends Request<BaseResponse<T>> {
 
-    private static final String TAG = "volley";
+    private static final String TAG = HNetConfig.TAG;
+
     private Builder mBuilder;
+    private JSONObject mRequestBody;
 
     public HTemplateRequest(@NonNull Builder builder) {
         super(builder.method, builder.url, builder.errorListener);
         this.mBuilder = builder;
+        this.mRequestBody = builder.bodyJsonObj;
     }
 
     @Override
@@ -122,15 +128,40 @@ public class HTemplateRequest<T> extends Request<BaseResponse<T>> {
         return mBuilder.headers != null ? mBuilder.headers : super.getHeaders();
     }
 
+    // for a POST or PUT request.
     @Override
     protected Map<String, String> getParams() throws AuthFailureError {
-        Map<String, String> params = new HashMap<>();
-        if (mBuilder.params != null) {
-            L.i(TAG, "getParams() :" + mBuilder.params.size());
-            // 在这里设置需要post的参数
-            params.putAll(mBuilder.params);
+        if (mBuilder != null && mBuilder.params != null) {
+            return mBuilder.params;
         }
-        return params;
+        return super.getParams();
+    }
+
+    /**
+     * Returns the raw POST or PUT body to be sent.
+     * <p/>
+     * <p>By default, the body consists of the request parameters in
+     * application/x-www-form-urlencoded format. When overriding this method, consider overriding
+     * {@link #getBodyContentType()} as well to match the new body format.
+     *
+     * @throws AuthFailureError in the event of auth failure
+     */
+    @Override
+    public byte[] getBody() throws AuthFailureError {
+        try {
+            if (mRequestBody != null) {
+                return mRequestBody.toString().getBytes(HUtils.PROTOCOL_CHARSET);
+            }
+
+            Map<String, String> params = getParams();
+            if (params != null && params.size() > 0) {
+                return HUtils.encodeParamsToBytes(params, getParamsEncoding());
+            }
+        } catch (UnsupportedEncodingException uee) {
+            // can't reach...
+            return null;
+        }
+        return null;
     }
 
     @Override
@@ -141,34 +172,22 @@ public class HTemplateRequest<T> extends Request<BaseResponse<T>> {
     }
 
     @Override
-    public void deliverError(VolleyError error) {
-        super.deliverError(error);
-    }
-
-    @Override
-    public byte[] getBody() throws AuthFailureError {
-        return super.getBody();
-    }
-
-    @Override
     public Priority getPriority() {
         return mBuilder.mPriority;
-    }
-
-    @Override
-    public String getBodyContentType() {
-        return super.getBodyContentType();
     }
 
     public final static class Builder<T> {
 
         private Gson mGson = new Gson();
-        private int method;
+        private int method = Method.GET;
         private String url;
+
         private Response.Listener<BaseResponse<T>> listener;
         private Response.ErrorListener errorListener;
+
         private Map<String, String> headers;
         private Map<String, String> params;
+        private JSONObject bodyJsonObj;
 
         @RESPONSE_TYPE
         private int responseType;
@@ -209,8 +228,29 @@ public class HTemplateRequest<T> extends Request<BaseResponse<T>> {
             return this;
         }
 
+        /**
+         * for a POST or PUT request body
+         * <p/>
+         * or GET params
+         *
+         * @param params Map<String, String>
+         *
+         * @return Builder
+         */
         public Builder params(Map<String, String> params) {
             this.params = params;
+            return this;
+        }
+
+        /**
+         * for a POST or PUT request body
+         *
+         * @param bodyJsonObj JSONObject
+         *
+         * @return Builder
+         */
+        public Builder bodyJsonObj(JSONObject bodyJsonObj) {
+            this.bodyJsonObj = bodyJsonObj;
             return this;
         }
 
@@ -234,7 +274,6 @@ public class HTemplateRequest<T> extends Request<BaseResponse<T>> {
         public HTemplateRequest build() {
             return new HTemplateRequest(this);
         }
-
     }
 
     public static final int RESPONSE_TYPE_JSONOBJECT = 0;

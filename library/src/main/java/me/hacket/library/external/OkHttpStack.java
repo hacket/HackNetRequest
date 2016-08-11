@@ -28,7 +28,7 @@ public class OkHttpStack extends HurlStack {
 
     public OkHttpStack(OkHttpClient client) {
         if (client == null) {
-            throw new NullPointerException("Client must not be null.");
+            throw new NullPointerException("OkHttpClient must not be null.");
         }
         mFactory = new OkUrlFactory(client);
     }

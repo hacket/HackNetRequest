@@ -13,7 +13,10 @@ import android.support.annotation.NonNull;
 /**
  * JsonObjectRequest
  * <p/>
- * Created by zengfansheng on 2016/8/2 0002.
+ * 其中post body为JSONObject
+ * <p/>
+ * <p/>
+ * Created by hacket on 2016/8/2 0002.
  */
 public class HJsonObjectRequest extends JsonObjectRequest {
 
@@ -34,16 +37,14 @@ public class HJsonObjectRequest extends JsonObjectRequest {
 
     public final static class Builder {
 
-        private int method;
+        private int method = Method.GET;
 
         private String url;
-
+        private Map<String, String> headers;
         private JSONObject bodyJsonObj;
 
         private Response.Listener<JSONObject> listener;
         private Response.ErrorListener errorListener;
-
-        private Map<String, String> headers;
 
         public Builder setMethod(int method) {
             this.method = method;

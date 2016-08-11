@@ -6,9 +6,9 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.HashMap;
-import java.util.Map;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.android.volley.Request;
@@ -20,33 +20,37 @@ import com.google.gson.reflect.TypeToken;
 import android.content.Context;
 import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
-import me.hacket.library.callback.RequestCallback;
+import me.hacket.library.callback.Callback;
 import me.hacket.library.callback.RequestError;
+import me.hacket.library.callback.TemplateCallback;
+import me.hacket.library.request.BaseResponse;
 import me.hacket.library.request.HJsonArrayRequest;
 import me.hacket.library.request.HJsonObjectRequest;
 import me.hacket.library.request.HStringRequest;
 import me.hacket.library.request.HTemplateRequest;
+import me.hacket.library.util.HUtils;
 import me.hacket.library.util.L;
 
 /**
  * 请求管理类
  * <p/>
- * Created by zengfansheng on 2016/8/2 0002.
+ * Created by hacket on 2016/8/2 0002.
  */
 public class NetworkManager {
 
-    private static final String TAG = NetworkManager.class.getSimpleName();
+    private static final String TAG = HNetConfig.TAG;
 
     private Gson mGson = new Gson();
     private VolleyManager mVolleyManager;
     private final String baseUrl;
     private final String pathUrl;
     private final int method;
-    private final TypeToken<?> classTarget;
+    private final TypeToken<?> targetType;
     @REQUEST_TYPE
     private int resultType;
     private final HashMap<String, String> headers;
-    private final HashMap<String, Object> bodyRequest;
+    private final HashMap<String, String> params;
+    private final String bodyRequest;
     @BEAN_TYPE
     private int beanType;
 
@@ -57,11 +61,12 @@ public class NetworkManager {
         this.baseUrl = builder.baseUrl;
         this.pathUrl = builder.pathUrl;
         this.method = builder.method;
-        this.classTarget = builder.targetType;
+        this.targetType = builder.targetType;
 
-        resultType = builder.resultType;
+        resultType = builder.requestType;
         this.headers = builder.headers;
-        this.bodyRequest = builder.bodyRequest;
+        this.params = builder.params;
+        this.bodyRequest = builder.postJsonBodys;
 
         this.beanType = builder.beanType;
     }
@@ -69,26 +74,22 @@ public class NetworkManager {
     // ==================== JsonObjectRequest  ==================== //
 
     /**
-     * 发送一个JsonObjectRequest
+     * JsonObject请求 , see {@link HJsonObjectRequest}
      *
-     * @param headers         headers
-     * @param bodyRequest     请求体
-     * @param requestTag      请求tag
-     * @param requestCallback 请求回调
-     * @param <T> T
+     * @param requestTag 请求tag
+     * @param callback   请求回调
+     * @param <T>        T
      */
-    private <T> void fromJsonObject(final HashMap<String, String> headers, HashMap<String, Object> bodyRequest,
-                                    String requestTag, final RequestCallback<T> requestCallback) {
+    private <T> void fromJsonObject(String requestTag, final Callback<T> callback) {
 
-        String url = buildUrlConnection();
-        int method = this.method;
+        String url = buildUrlStr();
 
         Response.Listener<JSONObject> listener = new Response.Listener<JSONObject>() {
             @Override
             public void onResponse(JSONObject jsonObject) {
-                if (requestCallback != null) {
-                    T t = mGson.fromJson(jsonObject.toString(), classTarget.getType());
-                    requestCallback.onRequestSuccess(t);
+                if (callback != null) {
+                    T t = mGson.fromJson(jsonObject.toString(), targetType.getType());
+                    callback.onResponseSuccess(t);
                 }
             }
         };
@@ -96,43 +97,46 @@ public class NetworkManager {
         final Response.ErrorListener errorListener = new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError volleyError) {
-                if (requestCallback != null) {
-                    requestCallback.onRequestError(new RequestError(volleyError));
+                if (callback != null) {
+                    callback.onResponseError(new RequestError(volleyError));
                 }
             }
         };
 
-        JSONObject bodyJsonObj = bodyRequest == null ? null : new JSONObject(bodyRequest);
+        JSONObject bodyJsonObj = null;
+        try {
+            bodyJsonObj = bodyRequest == null ? null : new JSONObject(bodyRequest);
+        } catch (JSONException e) {
+            L.printStackTrace(e);
+        }
 
         HJsonObjectRequest jsonObjectRequest = new HJsonObjectRequest.Builder()
                 .setUrl(url)
-                .setMethod(method)
-                .setHeaders(headers)
+                .setMethod(this.method)
+                .setHeaders(this.headers)
                 .setBodyJsonObj(bodyJsonObj)
                 .setListener(listener)
                 .setErrorListener(errorListener)
                 .build();
 
-        L.i(TAG, "fromJsonObject, url:" + url);
-
         mVolleyManager.addRequestToQueue(jsonObjectRequest, requestTag);
+
+        L.i(TAG, ">>>>>>request JsonObject, url:" + url + "<<<<<<");
     }
 
     // ==================== JsonObjectRequest  ==================== //
 
     // ==================== JsonArrayRequest  ==================== //
-    private <T> void fromJsonArray(final Map<String, String> headers, String requestTag,
-                                   final RequestCallback<T> requestCallback) {
+    private <T> void fromJsonArray(String requestTag, final Callback<T> callback) {
 
-        String url = buildUrlConnection();
-        int method = this.method;
+        String url = buildUrlStr();
 
         Response.Listener<JSONArray> listener = new Response.Listener<JSONArray>() {
             @Override
             public void onResponse(JSONArray jsonObject) {
-                if (requestCallback != null) {
-                    T t = mGson.fromJson(jsonObject.toString(), classTarget.getType());
-                    requestCallback.onRequestSuccess(t);
+                if (callback != null) {
+                    T t = mGson.fromJson(jsonObject.toString(), targetType.getType());
+                    callback.onResponseSuccess(t);
                 }
             }
         };
@@ -140,82 +144,105 @@ public class NetworkManager {
         final Response.ErrorListener errorListener = new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError volleyError) {
-                if (requestCallback != null) {
-                    requestCallback.onRequestError(new RequestError(volleyError));
+                if (callback != null) {
+                    callback.onResponseError(new RequestError(volleyError));
                 }
             }
         };
 
-        JSONObject bodyJsonObj = bodyRequest == null ? null : new JSONObject(bodyRequest);
+        JSONArray bodyJsonArray = null;
+        try {
+            bodyJsonArray = bodyRequest == null ? null : new JSONArray(bodyRequest);
+        } catch (JSONException e) {
+            L.printStackTrace(e);
+        }
 
         HJsonArrayRequest jsonArrayRequest = new HJsonArrayRequest.Builder()
-                .setMethod(method)
+                .setMethod(this.method)
                 .setUrl(url)
-                .setHeaders(headers)
-                .setBodyJsonObj(bodyJsonObj)
+                .setHeaders(this.headers)
+                .setBodyJsonArray(bodyJsonArray)
                 .setListener(listener)
                 .setErrorListener(errorListener)
                 .build();
 
         mVolleyManager.addRequestToQueue(jsonArrayRequest, requestTag);
+
+        L.i(TAG, ">>>>>>request JsonArray, url:" + url + "<<<<<<");
     }
 
     // ==================== JsonArrayRequest  ==================== //
 
     // ==================== StringRequest  ==================== //
-    private void fromString(HashMap<String, String> headers, String requestTag,
-                            final RequestCallback requestCallback) {
+    private void fromString(String requestTag, final Callback callback) {
 
-        String url = buildUrlConnection();
-        int method = this.method;
+        String url = buildUrlStr();
 
-        final Response.Listener<String> listener = new Response.Listener<String>() {
+        Response.Listener<String> listener = new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
-                if (requestCallback != null) {
-                    requestCallback.onRequestSuccess(response);
+                if (callback != null) {
+                    callback.onResponseSuccess(response);
                 }
             }
         };
 
-        final Response.ErrorListener errorListener = new Response.ErrorListener() {
+        Response.ErrorListener errorListener = new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError volleyError) {
-                if (requestCallback != null) {
-                    requestCallback.onRequestError(new RequestError(volleyError));
+                if (callback != null) {
+                    callback.onResponseError(new RequestError(volleyError));
                 }
             }
         };
 
+        JSONObject bodyJsonObj = null;
+        try {
+            bodyJsonObj = bodyRequest == null ? null : new JSONObject(bodyRequest);
+        } catch (JSONException e) {
+            L.printStackTrace(e);
+            L.w(TAG, ">>>>>>request String bodyJsonObj is null or malformed!");
+        }
+
         HStringRequest stringRequest = new HStringRequest.Builder()
-                .setMethod(method)
-                .setUrl(url)
-                .setHeaders(headers)
-                .setListener(listener)
-                .setErrorListener(errorListener)
+                .method(this.method)
+                .url(url)
+                .headers(this.headers)
+                .params(this.params)
+                .bodyJsonObj(bodyJsonObj)
+                .listener(listener)
+                .errorListener(errorListener)
                 .build();
 
-        L.i(TAG, "fromString, url:" + url);
-
         mVolleyManager.addRequestToQueue(stringRequest, requestTag);
+
+        L.i(TAG, ">>>>>>request String, url:" + url + "<<<<<<");
     }
 
     // ==================== StringRequest  ==================== //
 
     // ==================== TemplateRequest  ==================== //
 
-    private <T> void fromTemplate(final HashMap<String, String> headers, final String requestTag,
-                                  final RequestCallback<T> requestCallback) {
+    private <T> void fromTemplate(final String requestTag, final Callback<T> callback) {
 
-        String url = buildUrlConnection();
-        int method = this.method;
+        String url = buildUrlStr();
 
-        final Response.Listener<T> listener = new Response.Listener<T>() {
+        final Response.Listener<BaseResponse<T>> listener = new Response.Listener<BaseResponse<T>>() {
 
             @Override
-            public void onResponse(T response) {
-                if (requestCallback != null) {
-                    requestCallback.onRequestSuccess(response);
+            public void onResponse(BaseResponse<T> baseResponse) {
+
+                if (callback != null) {
+
+                    BaseResponse.Result result = baseResponse.result;
+                    if (baseResponse.isSuccessful()) {
+                        callback.onResponseSuccess(baseResponse.response);
+                    }
+
+                    if (callback instanceof TemplateCallback) {
+                        TemplateCallback<T> templateCallback = (TemplateCallback<T>) callback;
+                        templateCallback.onResponseStatus(result.code, result.desc);
+                    }
                 }
             }
         };
@@ -223,37 +250,49 @@ public class NetworkManager {
         final Response.ErrorListener errorListener = new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError volleyError) {
-                if (requestCallback != null) {
-                    requestCallback.onRequestError(new RequestError(volleyError));
+                if (callback != null) {
+                    callback.onResponseError(new RequestError(volleyError));
                 }
             }
         };
 
         HTemplateRequest templateRequest = new HTemplateRequest.Builder()
-                .method(method)
+                .method(this.method)
                 .url(url)
-                .headers(headers)
+                .headers(this.headers)
+                .priority(Request.Priority.NORMAL)
                 .listener(listener)
                 .errorListener(errorListener)
-                .typeToken(classTarget, beanType == BEAN_TYPE_CLASS ? HTemplateRequest.RESPONSE_TYPE_JSONOBJECT
+                .typeToken(targetType, beanType == BEAN_TYPE_CLASS ? HTemplateRequest.RESPONSE_TYPE_JSONOBJECT
                         : HTemplateRequest.RESPONSE_TYPE_JSONARRAY)
                 .build();
+
         mVolleyManager.addRequestToQueue(templateRequest, requestTag);
+
+        L.i(TAG, ">>>>>>request Json Template, url:" + url + "<<<<<<");
     }
+
     // ==================== TemplateRequest  ==================== //
 
-    public <T> void execute(String requestTag, final RequestCallback<T> requestCallback) {
+    /**
+     * execute
+     *
+     * @param requestTag 请求tag
+     * @param callback   callback , 如果使用模板{@link HTemplateRequest}可用{@link TemplateCallback}
+     * @param <T>        T
+     */
+    public <T> void execute(String requestTag, Callback<T> callback) {
         if (resultType == REQUEST_TYPE_DEFAULT) {
-            throw new IllegalArgumentException("result type must not be null.");
+            throw new IllegalArgumentException("request type must not be null.");
         }
 
-        if (classTarget == null) {
-            throw new IllegalArgumentException("class target must not be null.");
+        if (targetType == null) {
+            throw new IllegalArgumentException("targetType must not be null.");
         }
 
-        if (pathUrl == null) {
-            throw new IllegalArgumentException("path url must not be null.");
-        }
+        //        if (pathUrl == null) {
+        //            throw new IllegalArgumentException("pathUrl url must not be null.");
+        //        }
 
         switch (resultType) {
             case REQUEST_TYPE_JSONOBJECT:
@@ -262,16 +301,21 @@ public class NetworkManager {
                         throw new IllegalArgumentException("body request must not be null.");
                     }
                 }
-                fromJsonObject(headers, bodyRequest, requestTag, requestCallback);
+                fromJsonObject(requestTag, callback);
                 break;
             case REQUEST_TYPE_JSONARRAY:
-                fromJsonArray(headers, requestTag, requestCallback);
+                if (method == Request.Method.POST) {
+                    if (bodyRequest == null) {
+                        throw new IllegalArgumentException("body request must not be null.");
+                    }
+                }
+                fromJsonArray(requestTag, callback);
                 break;
             case REQUEST_TYPE_STRING:
-                fromString(headers, requestTag, requestCallback);
+                fromString(requestTag, callback);
                 break;
             case REQUEST_TYPE_TEMPLATE:
-                fromTemplate(headers, requestTag, requestCallback);
+                fromTemplate(requestTag, callback);
                 break;
             case REQUEST_TYPE_DEFAULT:
             default:
@@ -282,26 +326,58 @@ public class NetworkManager {
 
     // ===============  通用 ================ //
 
-    private String buildUrlConnection() {
+    /**
+     * 构建 url
+     * <p/>
+     * post : baseurl + pathurl
+     * <p/>
+     * get : baseurl + pathurl + param
+     *
+     * @return String
+     */
+    private String buildUrlStr() {
         StringBuilder builder = new StringBuilder();
-        builder.append(baseUrl).append(pathUrl);
+        if (method == Request.Method.GET) {
+            String encodeParams = HUtils.encodeParamsToStr(this.params);
+            builder.append(baseUrl).append(pathUrl).append("?").append(encodeParams);
+        } else {
+            builder.append(baseUrl).append(pathUrl);
+        }
         return builder.toString();
     }
 
+    // ===============  通用 ================ //
+
     public static class Builder implements INetworkManagerBuilder {
+
         private Context context;
+
         private String baseUrl;
         private String pathUrl;
         private int method;
-        private TypeToken<?> targetType;
-
-        @REQUEST_TYPE
-        private int resultType;
         private HashMap<String, String> headers;
-        private HashMap<String, Object> bodyRequest;
+        /**
+         * 参数
+         */
+        private HashMap<String, String> params;
+        /**
+         * POST或PUT的JSON BODY
+         */
+        private String postJsonBodys;
 
+        /**
+         * 请求类型 see {@link REQUEST_TYPE}
+         */
+        @REQUEST_TYPE
+        private int requestType;
+
+        /**
+         * 请求转换的bean类型 see {@link BEAN_TYPE}
+         */
         @BEAN_TYPE
         private int beanType;
+
+        private TypeToken<?> targetType;
 
         public Builder setContext(Context context) {
             this.context = context;
@@ -323,8 +399,13 @@ public class NetworkManager {
             return this;
         }
 
-        public Builder setBodyRequest(@NonNull HashMap<String, Object> bodyRequest) {
-            this.bodyRequest = bodyRequest;
+        public Builder setPostJsonBodys(@NonNull String postJsonBodys) {
+            this.postJsonBodys = postJsonBodys;
+            return this;
+        }
+
+        public Builder setParams(HashMap<String, String> params) {
+            this.params = params;
             return this;
         }
 
@@ -342,25 +423,25 @@ public class NetworkManager {
 
         @Override
         public INetworkManagerBuilder fromJsonObject() {
-            this.resultType = REQUEST_TYPE_JSONOBJECT;
+            this.requestType = REQUEST_TYPE_JSONOBJECT;
             return this;
         }
 
         @Override
         public INetworkManagerBuilder fromJsonArray() {
-            this.resultType = REQUEST_TYPE_JSONARRAY;
+            this.requestType = REQUEST_TYPE_JSONARRAY;
             return this;
         }
 
         @Override
         public INetworkManagerBuilder fromTemplate() {
-            this.resultType = REQUEST_TYPE_TEMPLATE;
+            this.requestType = REQUEST_TYPE_TEMPLATE;
             return this;
         }
 
         @Override
         public NetworkManager fromString() {
-            this.resultType = REQUEST_TYPE_STRING;
+            this.requestType = REQUEST_TYPE_STRING;
             this.targetType = TypeToken.get(String.class);
             return new NetworkManager(this);
         }
@@ -373,7 +454,7 @@ public class NetworkManager {
         }
 
         @Override
-        public NetworkManager toBean(@NonNull TypeToken typeToken) {
+        public NetworkManager toBean(@NonNull TypeToken<?> typeToken) {
             this.targetType = typeToken;
             this.beanType = BEAN_TYPE_TYPETOKEN;
             return new NetworkManager(this);
@@ -398,9 +479,25 @@ public class NetworkManager {
 
         NetworkManager fromString();
 
+        /**
+         * 类用
+         *
+         * @param classTarget Class
+         *
+         * @return NetworkManager
+         */
         NetworkManager toBean(@NonNull Class classTarget);
 
-        NetworkManager toBean(@NonNull TypeToken typeToken);
+        /**
+         * 集合用
+         *
+         * @param typeToken TypeToken
+         *                  <p/>
+         *                  TypeToken<List<TempObj>> typeToken = new TypeToken<List<TempObj>>(){};
+         *
+         * @return NetworkManager
+         */
+        NetworkManager toBean(@NonNull TypeToken<?> typeToken);
     }
 
     private static final int REQUEST_TYPE_DEFAULT = -1;
